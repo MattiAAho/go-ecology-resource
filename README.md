@@ -35,7 +35,7 @@ statistical_analysis.py         Bayesian analyses 1-5b (PyMC 5)
 plot_*.py                       One script per figure
 generate_final_figures.py       Regenerate all six main figures → figures/final/
 generate_supplementary_figures.py   Regenerate S1–S7 → figures/final/
-plot_gate_3p_diagnostic.py          Regenerate S8 → figures/final/
+plot_gate_3p_diagnostic.py          Regenerate S8 → figures/fig_gate_3p_diagnostic.pdf
 test_smoke.py                   Quick sanity-check (< 1 min)
 results/                        Created automatically; receives all .pkl outputs
 figures/                        Created automatically; receives all .pdf/.png outputs
@@ -160,7 +160,7 @@ Requires all previous steps to be complete.
 ```bash
 python generate_final_figures.py       # fig1–fig6 → figures/final/
 python generate_supplementary_figures.py   # S1–S7  → figures/final/
-python plot_gate_3p_diagnostic.py          # S8     → figures/final/
+python plot_gate_3p_diagnostic.py          # S8     → figures/fig_gate_3p_diagnostic.pdf
 ```
 
 Individual figures can also be regenerated independently, e.g.:
