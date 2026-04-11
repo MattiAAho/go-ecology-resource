@@ -222,4 +222,4 @@ print(result["black_occupancy"], result["coexistence_index"])
 
 ## License
 
-*(to be confirmed by the authors)*
+This code is released under the [GNU General Public License v3.0](LICENSE).
