@@ -1,7 +1,7 @@
 # Go-Ecology: Topology-Driven Contest Outcomes in a Resource-Competition Model
 
 Replication code for the paper  
-**"Irregular topology drives contest outcomes in a Go-based ecological resource model"**
+**"Irregular topology drives contest outcomes — coexistence, dominance, and bimodality in graph-based territorial competition"**
 
 ---
 
@@ -35,6 +35,7 @@ statistical_analysis.py         Bayesian analyses 1-5b (PyMC 5)
 plot_*.py                       One script per figure
 generate_final_figures.py       Regenerate all six main figures → figures/final/
 generate_supplementary_figures.py   Regenerate S1–S7 → figures/final/
+plot_gate_3p_diagnostic.py          Regenerate S8 → figures/final/
 test_smoke.py                   Quick sanity-check (< 1 min)
 results/                        Created automatically; receives all .pkl outputs
 figures/                        Created automatically; receives all .pdf/.png outputs
@@ -159,6 +160,7 @@ Requires all previous steps to be complete.
 ```bash
 python generate_final_figures.py       # fig1–fig6 → figures/final/
 python generate_supplementary_figures.py   # S1–S7  → figures/final/
+python plot_gate_3p_diagnostic.py          # S8     → figures/final/
 ```
 
 Individual figures can also be regenerated independently, e.g.:
@@ -176,13 +178,15 @@ python plot_coexistence_vs_k_combined.py   # fig5
 
 | Step | Runs | Wall time (8-core) |
 |------|------|--------------------|
-| Two-player sweep     | 13 312 | 4–8 h  |
-| RPS sweep            |  6 656 | 6–12 h |
-| AVA sweep            |  6 656 | 6–12 h |
-| Gate diagnostic      |  1 248 | 0.5–1 h |
-| Eye analysis         |  —     | 0.25 h  |
-| Statistical analysis |  —     | 0.5–1.5 h |
-| **Total**            | **27 872** | **~20–35 h** |
+| Two-player sweep              | ~13 300 | 4–8 h  |
+| RPS sweep                     |  ~6 650 | 6–12 h |
+| AVA sweep                     |  ~6 650 | 6–12 h |
+| Sync 3P diagnostic            |     416 | 0.25 h |
+| Gate on/off diagnostic (2P)   |  ~1 248 | 0.5–1 h |
+| Gate on/off diagnostic (3P)   |  ~2 496 | 1–2 h  |
+| Eye analysis                  |  —      | 0.25 h  |
+| Statistical analysis          |  —      | 0.5–1.5 h |
+| **Total**                     | **~30 760** | **~20–35 h** |
 
 All sweeps are parallelised with Python `multiprocessing` and scale roughly linearly
 with the number of available cores.
