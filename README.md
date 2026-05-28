@@ -15,8 +15,9 @@ described below.
 The model is a spatial resource-competition game played on a Go board whose
 neighbourhood structure is replaced by a random graph.  Two-player and three-player
 variants are studied across five graph topologies (ER, SBM, DC-SBM, lattice, torus),
-five mean-degree values (k = 8, 10, 12, 14, 19), and four board sizes (n = 81, 225,
-361, 625).
+five mean-degree values (k = 8, 10, 12, 14, 19), four board sizes (n = 81, 225,
+361, 625), and a systematic sweep of stochastic exploration rates — approximately
+50 000 simulation runs in total.
 
 ---
 
@@ -28,14 +29,20 @@ run_one_game.py                 Single-game runner and coordinate helpers
 parallel_benchmark_original_async_new.py   Multiprocessing harness
 analysis_helpers.py             Coexistence-index computation (ci_2p, etc.)
 rps_sweep.py                    Main sweep runner: two-player, RPS, AVA
-run_gate_diagnostic.py          Gate on/off diagnostic sweep
+run_gate_diagnostic.py          Two-player gate on/off diagnostic sweep
+run_gate_3p_diagnostic.py       Three-player gate on/off diagnostic sweep
+run_sync_3p_diagnostic.py       Synchronous-scheduler three-player diagnostic
+run_eps_sweep.py                Exploration-rate (ε) sensitivity sweep (modes: 2p, rps, ava)
 eye_analysis_3p.py              Eye/group structure analysis (three-player)
 coexistence_territory_plots.py  Territory plots for genuine coexistence runs
 statistical_analysis.py         Bayesian analyses 1-5b (PyMC 5)
 plot_*.py                       One script per figure
-generate_final_figures.py       Regenerate all six main figures → figures/final/
+generate_final_figures.py       Regenerate all seven main figures → figures/final/
 generate_supplementary_figures.py   Regenerate S1–S7 → figures/final/
 plot_gate_3p_diagnostic.py          Regenerate S8 → figures/fig_gate_3p_diagnostic.pdf
+plot_occ_trajectories.py            Regenerate S9 → figures/fig_occ_trajectories_dcsbm_eps.pdf
+plot_eps_policy_sensitivity.py      Regenerate S10 → figures/fig_eps_sbm_ci_distribution.pdf
+plot_eps_dcsbm_ava_coexistence.py   Regenerate fig7 → figures/fig_eps_dcsbm_ava_coexistence.pdf
 test_smoke.py                   Quick sanity-check (< 1 min)
 results/                        Created automatically; receives all .pkl outputs
 figures/                        Created automatically; receives all .pdf/.png outputs
@@ -94,18 +101,19 @@ Generates `results/two_p_all_v1.pkl`
 python rps_sweep.py full_2p v1
 ```
 
-Expected wall time: **4–8 hours** on a modern 8-core machine.
+Expected wall time: **~9 hours** on the reference machine (32 workers).  
+Scale proportionally with available cores.
 
 ### Step 3 — Three-player RPS sweep
 
 Generates `results/full_all_v2.pkl`  
-(6 656 runs: same topology/k/size grid, RPS contest, Gillespie + sync)
+(6 656 runs: same topology/k/size grid, RPS contest, Gillespie-like scheduler)
 
 ```bash
 python rps_sweep.py full_all v2
 ```
 
-Expected wall time: **6–12 hours**.
+Expected wall time: **3–6 hours** (32 workers).
 
 ### Step 4 — Three-player AVA sweep
 
@@ -116,20 +124,55 @@ Generates `results/ava_all_v1.pkl`
 python rps_sweep.py full_ava v1
 ```
 
-Expected wall time: **6–12 hours**.
+Expected wall time: **3–6 hours** (32 workers).
 
-### Step 5 — Gate diagnostic
+### Step 5 — Exploration-rate (ε) sweep
 
-Generates `results/gate_diag_v1.pkl`  
-(1 248 runs: gate on/off comparison, ER + SBM + DC-SBM, k = 10 and 14)
+Generates three files covering two-player, RPS, and AVA competition across
+ε ∈ {0.02, 0.04, 0.07, 0.15} (ER/SBM/DC-SBM) and ε ∈ {0.02, 0.15} (lattice/torus),
+k = 10 and 14, n = 225 and 625, 26 replicates (6 656 runs each).
+
+```bash
+python run_eps_sweep.py 2p v1    # → results/eps_sweep_2p_v1.pkl   (~6 h, 32 workers)
+python run_eps_sweep.py rps v1   # → results/eps_sweep_rps_v1.pkl   (~2 h, 32 workers)
+python run_eps_sweep.py ava v1   # → results/eps_sweep_ava_v1.pkl   (~4 h, 32 workers)
+```
+
+Each mode can be run independently; all three are required for the full figure set.
+
+### Step 6 — Gate diagnostics
+
+Two-player gate diagnostic:
 
 ```bash
 python run_gate_diagnostic.py
 ```
 
+Generates `results/gate_diag_v1.pkl`  
+(1 248 runs: gate on/off comparison, ER + SBM + DC-SBM, k = 10 and 14)  
 Expected wall time: **30–60 minutes**.
 
-### Step 6 — Eye / group structure analysis
+Three-player gate diagnostic (required for S8):
+
+```bash
+python run_gate_3p_diagnostic.py
+```
+
+Generates `results/gate_3p_diag_v1.pkl`  
+(2 496 runs: same design, RPS + AVA)  
+Expected wall time: **1–2 hours**.
+
+Synchronous-scheduler diagnostic:
+
+```bash
+python run_sync_3p_diagnostic.py
+```
+
+Generates `results/sync_3p_diag_v1.pkl`  
+(416 runs: two-player + RPS + AVA under synchronous scheduling, ER + SBM, k = 10 and 14)  
+Expected wall time: **15–30 minutes**.
+
+### Step 7 — Eye / group structure analysis
 
 Generates `results/eye_records_3p.pkl` and diagnostic plots in `results/`.  
 Requires Steps 3 and 4 to be complete.
@@ -140,7 +183,7 @@ python eye_analysis_3p.py
 
 Expected wall time: **5–15 minutes**.
 
-### Step 7 — Statistical analysis
+### Step 8 — Statistical analysis
 
 Runs five Bayesian models (PyMC 5, 4 chains × 2 000 draws each).  
 Requires Steps 2–4.  
@@ -153,22 +196,25 @@ python statistical_analysis.py
 Expected wall time: **30–90 minutes** depending on CPU/GPU availability.  
 If a trace file already exists it is loaded from cache rather than re-sampled.
 
-### Step 8 — Generate all figures
+### Step 9 — Generate all figures
 
 Requires all previous steps to be complete.
 
 ```bash
-python generate_final_figures.py       # fig1–fig6 → figures/final/
-python generate_supplementary_figures.py   # S1–S7  → figures/final/
-python plot_gate_3p_diagnostic.py          # S8     → figures/fig_gate_3p_diagnostic.pdf
+python generate_final_figures.py           # fig1–fig6 → figures/final/
+python generate_supplementary_figures.py   # S1–S7    → figures/final/
+python plot_gate_3p_diagnostic.py          # S8       → figures/fig_gate_3p_diagnostic.pdf
+python plot_occ_trajectories.py            # S9       → figures/fig_occ_trajectories_dcsbm_eps.pdf
+python plot_eps_policy_sensitivity.py      # S10      → figures/fig_eps_sbm_ci_distribution.pdf
+python plot_eps_dcsbm_ava_coexistence.py   # fig7     → figures/fig_eps_dcsbm_ava_coexistence.pdf
 ```
 
 Individual figures can also be regenerated independently, e.g.:
 
 ```bash
-python plot_monopoly_heatmap.py        # fig1
-python plot_bimodality.py              # fig2
-python plot_bimodality_by_k.py         # fig3
+python plot_monopoly_heatmap.py            # fig1
+python plot_bimodality.py                  # fig2
+python plot_bimodality_by_k.py             # fig3
 python plot_coexistence_vs_k_combined.py   # fig5
 ```
 
@@ -176,20 +222,23 @@ python plot_coexistence_vs_k_combined.py   # fig5
 
 ## Approximate total compute
 
-| Step | Runs | Wall time (8-core) |
-|------|------|--------------------|
-| Two-player sweep              | ~13 300 | 4–8 h  |
-| RPS sweep                     |  ~6 650 | 6–12 h |
-| AVA sweep                     |  ~6 650 | 6–12 h |
-| Sync 3P diagnostic            |     416 | 0.25 h |
-| Gate on/off diagnostic (2P)   |  ~1 248 | 0.5–1 h |
-| Gate on/off diagnostic (3P)   |  ~2 496 | 1–2 h  |
-| Eye analysis                  |  —      | 0.25 h  |
-| Statistical analysis          |  —      | 0.5–1.5 h |
-| **Total**                     | **~30 760** | **~20–35 h** |
+Wall times measured on a 32-worker machine (Python `ProcessPoolExecutor`).
+Scale roughly linearly with available cores.
 
-All sweeps are parallelised with Python `multiprocessing` and scale roughly linearly
-with the number of available cores.
+| Step | Runs | Wall time (32 workers) |
+|------|------|------------------------|
+| Two-player sweep              | 13 312 | ~9 h    |
+| RPS sweep                     |  6 656 | ~3–6 h  |
+| AVA sweep                     |  6 656 | ~3–6 h  |
+| ε sweep — two-player          |  6 656 | ~6 h    |
+| ε sweep — RPS                 |  6 656 | ~2 h    |
+| ε sweep — AVA                 |  6 656 | ~4 h    |
+| Sync 3P diagnostic            |    416 | ~0.25 h |
+| Gate on/off diagnostic (2P)   |  1 248 | ~0.5–1 h |
+| Gate on/off diagnostic (3P)   |  2 496 | ~1–2 h  |
+| Eye analysis                  |   —    | ~0.25 h |
+| Statistical analysis          |   —    | ~0.5–1.5 h |
+| **Total**                     | **~50 700** | **~30–40 h** |
 
 ---
 
