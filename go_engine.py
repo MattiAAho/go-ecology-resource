@@ -1020,6 +1020,7 @@ def step_mixed(
     Periodic random or epsilon-random; otherwise main policy.
     """
     use_rand = (random_every and t % random_every == 0) or (eps > 0 and rng.random() < eps)
+    gs.last_move_used_rand = bool(use_rand)   # expose move provenance (eps/random vs heuristic) for capture attribution
     pol = policy_rand if use_rand else policy_main
     return step(gs, color, rng, pol)
 

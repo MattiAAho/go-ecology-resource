@@ -84,7 +84,7 @@ def fill_panel(ax, runs_by_gtype: dict[str, list], k: int, sched_key: str):
         ci_vals = [ci_2p(r) for r in runs]
         density = kde(ci_vals)
         n       = sum(np.isfinite(v) for v in ci_vals)
-        n_labels.append(f"{st['label']} n={n:,}")
+        n_labels.append(f"{st['label']} {n:,} runs")
 
         ax.fill_between(CI_GRID, density, color=st["color"],
                         alpha=st["alpha"], zorder=st["zorder"],
@@ -106,7 +106,7 @@ def fill_panel(ax, runs_by_gtype: dict[str, list], k: int, sched_key: str):
 
     # Reference lines
     ax.axvline(0.1, color="0.55", lw=0.75, ls="--", alpha=0.65)
-    ax.axvline(0.9, color="0.55", lw=0.75, ls="--", alpha=0.65)
+    ax.axvline(0.85, color="0.55", lw=0.75, ls="--", alpha=0.65)
     ax.set_xlim(0, 1)
     ax.set_ylim(bottom=0)
     ax.grid(axis="y", alpha=0.2, lw=0.5)
@@ -119,7 +119,7 @@ def fill_panel(ax, runs_by_gtype: dict[str, list], k: int, sched_key: str):
                        for r in gtype_r])
     all_ci = all_ci[np.isfinite(all_ci)]
     mono = np.mean(all_ci < 0.1)
-    coex = np.mean(all_ci > 0.9)
+    coex = np.mean(all_ci > 0.85)   # segregation: CI > 0.85 (m1, MA 2026-10-31)
     ymax = ax.get_ylim()[1]
 
     return mono, coex
@@ -157,7 +157,7 @@ for col_i, (sched_key, sched_label) in enumerate(SCHEDULERS):
             ax.set_ylabel("Density (KDE)", fontsize=8.5)
 
         if row_i == len(K_VALUES) - 1:
-            ax.set_xlabel("Coexistence index  (0 = monopoly → 1 = equal)", fontsize=9)
+            ax.set_xlabel("Coexistence index  (0 = one species only → 1 = equal)", fontsize=9)
 
         # Legend: k=10 left panel (first row where both SBM and DC-SBM exist)
         if row_i == 1 and col_i == 0:
@@ -174,10 +174,10 @@ for row_i in range(len(K_VALUES)):
             continue
         mono, coex = ax._pole_stats
         ylim = ax.get_ylim()[1]
-        ax.text(0.03, ylim * 0.96, f"{mono:.0%}\nmonopoly",
+        ax.text(0.03, ylim * 0.96, f"{mono:.0%}\ndominance",
                 fontsize=7.5, ha="left", va="top", color="#1a1a1a",
                 bbox=dict(boxstyle="round,pad=0.2", fc="white", alpha=0.75))
-        ax.text(0.97, ylim * 0.96, f"{coex:.0%}\ncoexist.",
+        ax.text(0.97, ylim * 0.96, f"{coex:.0%}\nsegregation",
                 fontsize=7.5, ha="right", va="top", color="#1a1a1a",
                 bbox=dict(boxstyle="round,pad=0.2", fc="white", alpha=0.75))
 
@@ -256,10 +256,10 @@ for idx in range(len(PANEL_SPECS)):
         continue
     mono, coex = ax._pole_stats
     ylim = ax.get_ylim()[1]
-    ax.text(0.03, ylim * 0.96, f"{mono:.0%}\nmonopoly",
+    ax.text(0.03, ylim * 0.96, f"{mono:.0%}\ndominance",
             fontsize=7.5, ha="left", va="top", color="#1a1a1a",
             bbox=dict(boxstyle="round,pad=0.2", fc="white", alpha=0.75))
-    ax.text(0.97, ylim * 0.96, f"{coex:.0%}\ncoexist.",
+    ax.text(0.97, ylim * 0.96, f"{coex:.0%}\nsegregation",
             fontsize=7.5, ha="right", va="top", color="#1a1a1a",
             bbox=dict(boxstyle="round,pad=0.2", fc="white", alpha=0.75))
 

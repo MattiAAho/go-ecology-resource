@@ -166,9 +166,10 @@ for ax, gtype in zip(axes4, GRAPH_TYPES_4):
 axes4[0].set_ylabel("Board size", fontsize=10)
 
 cb4 = fig4.colorbar(last_im4, ax=axes4.tolist(),
-                    fraction=0.02, pad=0.03, orientation="horizontal")
+                    fraction=0.02, pad=0.03, orientation="horizontal",
+                    aspect=60)   # a longer bar, so the tick labels do not crowd (MA 2026-10-31)
 cb4.set_label(
-    "Extinction rate  (fraction of runs with weakest-species occupancy < 0.5%)",
+    "Near-extinction rate  (fraction of runs with weakest-species occupancy < 0.5%)",
     fontsize=10,
 )
 cb4.set_ticks([0, 0.25, 0.5, 0.75, 1.0])

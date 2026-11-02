@@ -25,13 +25,16 @@ with open("results/two_p_all_v1.pkl",  "rb") as fh: twop = pickle.load(fh)
 with open("results/full_all_v2.pkl",   "rb") as fh: rps  = pickle.load(fh)
 with open("results/ava_all_v1.pkl",    "rb") as fh: ava  = pickle.load(fh)
 
-twop = [r for r in twop if not r.get("connectivity_failed") and r.get("black_occupancy")]
+twop = [r for r in twop if not r.get("connectivity_failed") and r.get("black_occupancy") is not None]
+# 2026-11-01 (DEFECT-NOTE: D8, dev repo OPEN_DEFECTS.md): the filter was r.get("black_occupancy"), which dropped every game black
+# ended with no stones (1,998 of 13,303) and inflated the two-player means; repaired with MA's OK.
 rps  = [r for r in rps  if not r.get("connectivity_failed") and r.get("jain_fairness_final")]
 ava  = [r for r in ava  if not r.get("connectivity_failed") and r.get("jain_fairness_final")]
 
 # ── style ─────────────────────────────────────────────────────────────────────
 COLORS = {"er":"#e41a1c","sbm":"#377eb8","dc_sbm":"#ff7f00",
           "lattice":"#4daf4a","torus":"#984ea3"}
+LABELS = {"er":"ER","sbm":"SBM","dc_sbm":"DC-SBM","lattice":"lattice","torus":"torus"}
 GTYPES_2P = ["er","sbm","dc_sbm","lattice","torus"]
 GTYPES_3P = ["er","sbm","dc_sbm","lattice","torus"]
 
@@ -49,7 +52,6 @@ def means_by_policy(data, policies, metric_fn, gtype):
 
 # ── figure ────────────────────────────────────────────────────────────────────
 fig, axes = plt.subplots(2, 2, figsize=(12, 8), constrained_layout=True)
-fig.suptitle("Policy sensitivity — all k and grid sizes pooled  (diagnostic)", fontsize=11)
 
 PANEL_SPECS = [
     # (ax, data, policies, metric_fn, gtypes, title)
@@ -77,7 +79,7 @@ for ax, data, policies, metric_fn, gtypes, title in PANEL_SPECS:
         ns = [stats[p][2] for p in policies]
         xpos = xs + offsets[i]
         ax.errorbar(xpos, ys, yerr=es,
-                    fmt="o-", color=COLORS[gtype], label=gtype,
+                    fmt="o-", color=COLORS[gtype], label=LABELS[gtype],
                     markersize=5, linewidth=1.2, capsize=3, alpha=0.85)
 
     ax.set_xticks(xs)
@@ -91,4 +93,5 @@ for ax, data, policies, metric_fn, gtypes, title in PANEL_SPECS:
 
 out = FIGURES_DIR / "fig_policy_sensitivity.png"
 fig.savefig(out, dpi=150)
-print(f"Saved {out}")
+fig.savefig(out.with_suffix(".pdf"))   # generate_supplementary_figures.py copies the .pdf to figures/final/S1.pdf
+print(f"Saved {out} and {out.with_suffix('.pdf')}")

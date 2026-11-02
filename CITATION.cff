@@ -1,14 +1,14 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it using the metadata from this file."
-title: "Go-Ecology: Topology-Driven Contest Outcomes in a Resource-Competition Model"
+title: "Go-Ecology: a Go-inspired territorial competition model on graphs"
 abstract: >-
   Simulation and analysis code for a Go-inspired territorial competition model on
   graphs, studying how network topology (Erdos-Renyi, SBM, DC-SBM, lattice, torus)
   and scheduling (synchronous vs energy-weighted asynchronous) shape competition
   outcomes — coexistence, dominance, and bimodality — in two- and three-player
-  rock-paper-scissors and all-vs-all contests. Backs the paper "Irregular topology
-  drives contest outcomes: coexistence, dominance, and bimodality in graph-based
-  territorial competition."
+  rock-paper-scissors and all-vs-all contests. Backs the paper "Inspired by Go:
+  playing ecology with complex topologies – two- and three-species territorial
+  competition on regular and irregular graphs."
 type: software
 authors:
   - family-names: "Aho"

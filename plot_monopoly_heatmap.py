@@ -139,14 +139,14 @@ for row_i, gtype in enumerate(GRAPH_TYPES):
         if row_i == len(GRAPH_TYPES) - 1:
             ax.set_xlabel("Mean degree k", fontsize=10)
         if col_i == 0:
-            ax.set_ylabel(f"{GRAPH_LABEL[gtype]}\n\nGrid size", fontsize=10)
+            ax.set_ylabel(f"{GRAPH_LABEL[gtype]}\n\nBoard size", fontsize=10)
         if row_i == 0:
             ax.set_title(SCHED_LABEL[scheduler], fontsize=11, fontweight="bold")
 
 # single shared colorbar below all panels
 cb = fig.colorbar(last_im, ax=axes.ravel().tolist(),
                   fraction=0.02, pad=0.03, orientation="horizontal")
-cb.set_label("Monopoly rate  (fraction of runs with ci < 0.1)", fontsize=10)
+cb.set_label("Dominance rate  (fraction of runs with CI < 0.10)", fontsize=10)
 cb.set_ticks([0, 0.25, 0.5, 0.75, 1.0])
 cb.set_ticklabels(["0%", "25%", "50%", "75%", "100%"])
 

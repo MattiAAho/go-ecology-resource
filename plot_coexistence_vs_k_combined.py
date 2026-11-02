@@ -20,6 +20,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from scipy import stats
 
 from analysis_helpers import ci_2p
 
@@ -51,7 +52,10 @@ def group_means(data, metric_fn):
         v = metric_fn(r)
         if v is not None and np.isfinite(v):
             groups[(r["_graph_type"], r["_target_k"])].append(v)
-    return {k: (np.mean(v), 1.96 * np.std(v) / np.sqrt(len(v))) for k, v in groups.items()}
+    # v6 (register C3): 89% HDI of the mean. Normal model, reference prior p(mu, sigma) ~ 1/sigma, so the posterior of
+    # the mean is Student t(n-1) at the sample mean with scale s/sqrt(n); symmetric, so HDI = central interval.
+    return {k: (np.mean(v), stats.t.ppf(0.945, len(v) - 1) * np.std(v, ddof=1) / np.sqrt(len(v)))
+            for k, v in groups.items()}
 
 means_2p  = group_means(twop, ci_2p)
 means_rps = group_means(rps,  lambda r: r["jain_fairness_final"])
@@ -74,11 +78,11 @@ fig, axes = plt.subplots(1, 3, figsize=(15, 4.8),
 
 PANEL_SPECS = [
     (axes[0], means_2p,  "Two-player (Gillespie-like)",
-     "Mean coexistence index\n(stones-normalised, 0 = monopoly)", None),
+     "Mean coexistence index\n(stones-normalised, 0 = one species only)", None),
     (axes[1], means_rps, "Three-player RPS",
-     "Mean Jain fairness index\n(J = 1/3 monopoly floor, J = 1 equal)", 1/3),
+     "Mean Jain fairness index\n(J = 1/3 one species only, J = 1 equal)", 1/3),
     (axes[2], means_ava, "Three-player AVA",
-     "Mean Jain fairness index\n(J = 1/3 monopoly floor, J = 1 equal)", 1/3),
+     "Mean Jain fairness index\n(J = 1/3 one species only, J = 1 equal)", 1/3),
 ]
 
 for panel_i, (ax, means, title, ylabel, jain_floor) in enumerate(PANEL_SPECS):
@@ -95,7 +99,12 @@ for panel_i, (ax, means, title, ylabel, jain_floor) in enumerate(PANEL_SPECS):
 
     if jain_floor is not None:
         ax.axhline(jain_floor, color="0.55", lw=0.9, ls=":", alpha=0.7,
-                   label=f"monopoly floor (J = 1/3)")
+                   label="one species holds all stones (J = 1/3)")
+        # v6 (register A2): J = 2/3 is one species absent with the other two equal
+        ax.axhline(2/3, color="0.55", lw=0.9, ls=":", alpha=0.7,
+                   label="one species absent, two equal (J = 2/3)")
+        for y, txt in ((1/3, "J = 1/3: one species"), (2/3, "J = 2/3: one absent, two equal")):
+            ax.text(19.6, y + 0.012, txt, fontsize=7.5, color="0.4", va="bottom", ha="right")
 
     ax.set_title(title, fontsize=11, fontweight="bold")
     ax.set_xlabel("Mean degree k", fontsize=10)
@@ -106,23 +115,7 @@ for panel_i, (ax, means, title, ylabel, jain_floor) in enumerate(PANEL_SPECS):
 
     if panel_i == 0:
         ax.legend(fontsize=9, loc="upper right", framealpha=0.85)
-        # Collapse annotation: arrow along the ER line from k=10→k=14
-        ax.annotate(
-            "coexistence\ncollapse",
-            xy=(14, 0.18),          # arrowhead — near actual ER value at k=14
-            xytext=(12, 0.09),      # text centre at x=12, y≈0.10
-            fontsize=8.5,
-            color="#e41a1c",        # ER colour
-            ha="center",
-            fontstyle="italic",
-            arrowprops=dict(
-                arrowstyle="->",
-                color="#e41a1c",
-                lw=1.5,
-                shrinkA=4,
-                shrinkB=4,
-            ),
-        )
+        # (the 'coexistence collapse' arrow was removed 2026-11-01, H4 read E8: the caption describes the decline)
 
     # panel label (a), (b), (c)
     ax.text(-0.08, 1.02, f"({'abc'[panel_i]})",

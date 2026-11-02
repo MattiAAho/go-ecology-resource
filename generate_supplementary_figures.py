@@ -1,13 +1,13 @@
 """
 generate_supplementary_figures.py — Regenerate all supplementary figures.
 
-Figures saved to figures/final/ as S1.pdf through S7.pdf.
-S3 (gate extended, n=225+625) is not yet implemented — see note below.
+Figures saved to figures/final/ as S1, S2 and S4-S7 (.pdf).
+S3 (gate extended, n=225+625) is made by plot_gate_extended.py, which writes figures/final/S3.pdf itself.
 
 Figure mapping:
   S1 — Policy sensitivity            (plot_policy_sensitivity.py)
   S2 — Capture dynamics              (plot_capture_summary.py → already PDF)
-  S3 — Gate on/off extended          *** NOT YET GENERATED — deferred ***
+  S3 — Gate on/off extended          (plot_gate_extended.py, run separately)
   S4 — Two-player stone group struct. (plot_eye_diagnostic.py, fig 1)
   S5 — Three-player eye/group struct. (plot_eye_diagnostic.py, fig 2)
   S6 — Genuine coexistence rate       (coexistence_territory_plots.py, plot3)
@@ -89,9 +89,9 @@ run_and_copy("plot_capture_summary.py", "fig_capture_summary.pdf", "S2.pdf")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# S3 — Gate on/off extended (n=225 + n=625) — NOT YET GENERATED
+# S3 — Gate on/off extended (n=225 + n=625) — made by plot_gate_extended.py
 # ─────────────────────────────────────────────────────────────────────────────
-print("\n── S3.pdf — SKIPPED (use plot_gate_extended.py) ──")
+print("\n── S3.pdf — not made here (run plot_gate_extended.py) ──")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -137,5 +137,5 @@ print("\n" + "=" * 60)
 print("Done. Supplementary figures in figures/final/:")
 for p in sorted(FINAL_DIR.glob("S*.pdf")):
     print(f"  {p.name}")
-print("\n  S3.pdf — NOT generated (deferred; requires plot_gate_extended.py)")
+print("\n  S3.pdf — made by plot_gate_extended.py (not by this script)")
 print("=" * 60)

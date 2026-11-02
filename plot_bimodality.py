@@ -16,7 +16,7 @@ Actual layout chosen: 1 row × 2 cols
 
 Both panels share the x-axis (CI 0–1) and y-axis scale.
 
-The dramatic emptiness between ci≈0.1 and ci≈0.9 is the visual anchor
+The dramatic emptiness between ci≈0.1 and ci≈0.85 is the visual anchor
 for Claim 2.  Overlaying the two graph types in each panel directly
 demonstrates that DC-SBM and SBM produce nearly identical distributions
 (Claim 3).
@@ -68,7 +68,7 @@ print(f"  {len(valid)} valid SBM/DC-SBM records")
 
 SCHED_MAP = {
     "sync":          "Synchronous (round-robin)",
-    "gillespie_occ": "Gillespie (energy-weighted async)",
+    "gillespie_occ": "Gillespie-like (energy-weighted async)",
 }
 SCHED_ORDER = ["sync", "gillespie_occ"]
 
@@ -109,7 +109,7 @@ for ax, sched in zip(axes, SCHED_ORDER):
 
     # Regime shading — both panels
     ax.axvspan(0.0, 0.1, alpha=0.10, color="#d73027", zorder=0, lw=0)
-    ax.axvspan(0.9, 1.0, alpha=0.10, color="#1a9850", zorder=0, lw=0)
+    ax.axvspan(0.85, 1.0, alpha=0.10, color="#1a9850", zorder=0, lw=0)   # segregation: CI > 0.85 (m1, MA 2026-10-31)
 
     for gtype in ("sbm", "dc_sbm"):
         style = GRAPH_STYLE[gtype]
@@ -125,7 +125,7 @@ for ax, sched in zip(axes, SCHED_ORDER):
             color=style["color"],
             alpha=style["alpha"],
             zorder=style["zorder"],
-            label=f"{style['label']}  (n={len(ci):,})",
+            label=f"{style['label']}  ({len(ci):,} runs)",
         )
         ax.plot(
             CI_GRID, density,
@@ -136,7 +136,7 @@ for ax, sched in zip(axes, SCHED_ORDER):
 
     # Reference lines at regime boundaries
     ax.axvline(0.1, color="0.5", lw=0.8, ls="--", alpha=0.7)
-    ax.axvline(0.9, color="0.5", lw=0.8, ls="--", alpha=0.7)
+    ax.axvline(0.85, color="0.5", lw=0.8, ls="--", alpha=0.7)
 
     # Regime labels — sync panel only, placed above KDE curves
     # x=0.13 / x=0.87 keeps text clear of the y-axis and right edge
@@ -144,12 +144,12 @@ for ax, sched in zip(axes, SCHED_ORDER):
         ax.text(0.13, 0.97, "dominance\nregime",
                 transform=ax.transAxes, ha="center", va="top",
                 fontsize=9, fontstyle="italic", color="#a01010", zorder=6)
-        ax.text(0.87, 0.97, "coexistence\nregime",
+        ax.text(0.87, 0.97, "segregation\nregime",
                 transform=ax.transAxes, ha="center", va="top",
                 fontsize=9, fontstyle="italic", color="#1a6e35", zorder=6)
 
     ax.set_title(SCHED_MAP[sched], fontsize=11, pad=6)
-    ax.set_xlabel("Coexistence index  (0 = monopoly → 1 = equal coexistence)", fontsize=9.5)
+    ax.set_xlabel("Coexistence index  (0 = one species only → 1 = equal coexistence)", fontsize=9.5)
     ax.set_xlim(0.0, 1.0)
     ax.set_ylim(bottom=0)
     ax.grid(axis="y", alpha=0.25, linewidth=0.5)

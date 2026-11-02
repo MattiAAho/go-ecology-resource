@@ -212,8 +212,11 @@ def run_one_game(
     store_final_libs=True,       # default True since it's cheap & useful
     store_interblock=True,       # default True since it's cheap
     store_cap_ts: bool = False,          # store captures_per_turn (cap size per event)
+    store_capture_events: bool = False,  # store (t, color, cap_size, was_eps) per capture event
     store_occ_ts: bool = False,          # store occupancy trajectories
     occ_every: int = 10,                 # sample occupancy every N turns
+    store_contact_ts: bool = False,      # store prey contact rate trajectories (requires prey_of)
+    store_hub_ownership_ts: bool = False, # store hub entropy trajectory (hubs = degree >= 2*k_mean)
     store_R_ts: bool = False,
     store_sat_state: bool = True,   # new parameter, cheap
     R_every: int = 25,
@@ -277,12 +280,27 @@ def run_one_game(
     eff_w_ts = [] if store_eff_ts else None
 
     captures_per_turn = [] if (store_timeseries and store_cap_ts) else None
+    capture_events = [] if store_capture_events else None  # (t, color, cap_size, was_eps); independent of store_timeseries
 
     occ_b_ts = [] if store_occ_ts else None
     occ_w_ts = [] if store_occ_ts else None
     occ_t_ts = [] if store_occ_ts else None  # timestamps
     # N-player generalization: one list per color
     occ_ts_by_color = {c: [] for c in gs.colors} if store_occ_ts else None
+    contact_ts_by_color = {c: [] for c in gs.colors} if store_contact_ts else None
+    # boundary INTENSITY (mean target-neighbour count per stone), parallel to incidence above
+    contact_intensity_by_color = {c: [] for c in gs.colors} if store_contact_ts else None
+
+    # Hub ownership trajectory — identify hub nodes once at game start.
+    _hub_set: frozenset = frozenset()
+    _n_hubs_total: int = 0
+    hub_entropy_ts: list | None = None
+    if store_hub_ownership_ts:
+        _deg = dict(G.degree())
+        _k_mean = sum(_deg.values()) / max(1, len(_deg))
+        _hub_set = frozenset(v for v, d in _deg.items() if d >= 2.0 * _k_mean)
+        _n_hubs_total = len(_hub_set)
+        hub_entropy_ts = []
 
     R_mean_ts = [] if (store_timeseries and store_R_ts) else None
     R_occ_mean_ts = [] if (store_timeseries and store_R_ts) else None
@@ -512,7 +530,9 @@ def run_one_game(
             cap_total[color] += int(cap_eff)
             if cap_eff > 0:
                 captures_n_count += 1
-        
+                if store_capture_events:
+                    capture_events.append((t, color, int(cap_eff), bool(gs.last_move_used_rand)))
+
         else:
             illegal_count += int(illegal)
             
@@ -622,6 +642,46 @@ def run_one_game(
             occ_t_ts.append(t)
             for _c in gs.colors:
                 occ_ts_by_color[_c].append(gs.n_stones.get(_c, 0) / n)
+
+        # --- contact rate trajectory sampling (observe-and-log only; never writes gs) ---
+        # Records two trajectories per colour: INCIDENCE (fraction of stones with >=1 target
+        # neighbour) and INTENSITY (mean target-neighbour count per stone). Targets are the
+        # prey colour(s) in RPS (forward cycle edge) and any heterospecific in AVA (prey_of None).
+        if store_contact_ts and (t % occ_every == 0):
+            for _c in gs.colors:
+                _ns_c = gs.n_stones.get(_c, 0)
+                if _ns_c == 0:
+                    contact_ts_by_color[_c].append(float("nan"))
+                    contact_intensity_by_color[_c].append(float("nan"))
+                    continue
+                _targets = set(gs.prey_of[_c]) if gs.prey_of is not None else None
+                _hit = 0   # stones with >=1 target neighbour (incidence numerator)
+                _deg = 0   # total target-neighbour edges    (intensity numerator)
+                for _v, _vs in gs.state.items():
+                    if _vs != _c:
+                        continue
+                    if _targets is not None:
+                        _k = sum(1 for _u in gs.neigh[_v] if gs.state.get(_u, 0) in _targets)
+                    else:
+                        _k = sum(1 for _u in gs.neigh[_v] if gs.state.get(_u, 0) not in (0, _c))
+                    if _k:
+                        _hit += 1
+                    _deg += _k
+                contact_ts_by_color[_c].append(_hit / _ns_c)
+                contact_intensity_by_color[_c].append(_deg / _ns_c)
+
+        # --- hub ownership entropy sampling ---
+        if store_hub_ownership_ts and _hub_set and (t % occ_every == 0):
+            _owned = [gs.state[v] for v in _hub_set if gs.state.get(v, 0) != 0]
+            if _owned:
+                _cts: dict[int, int] = {}
+                for _cv in _owned:
+                    _cts[_cv] = _cts.get(_cv, 0) + 1
+                _tot = len(_owned)
+                _ent = -sum((_p / _tot) * np.log(_p / _tot + 1e-12) for _p in _cts.values())
+                hub_entropy_ts.append(_ent / np.log(max(2, len(gs.colors))))  # type: ignore[union-attr]
+            else:
+                hub_entropy_ts.append(float("nan"))  # type: ignore[union-attr]
 
         # --- extinction tracking ---
         for _ec in gs.colors:
@@ -855,11 +915,22 @@ def run_one_game(
     if store_timeseries and store_cap_ts:
         result["captures_per_turn"] = captures_per_turn
 
+    if store_capture_events:
+        result["capture_events"] = capture_events
+
     if store_occ_ts:
         result["occ_b_ts"] = occ_b_ts
         result["occ_w_ts"] = occ_w_ts
         result["occ_t_ts"] = occ_t_ts
         result["occ_ts_by_color"] = occ_ts_by_color  # N-player: {color: [fractions]}
+
+    if store_contact_ts:
+        result["contact_ts_by_color"] = contact_ts_by_color  # incidence {color: [fractions]}
+        result["contact_intensity_by_color"] = contact_intensity_by_color  # mean count/stone
+
+    if store_hub_ownership_ts:
+        result["hub_entropy_ts"] = hub_entropy_ts
+        result["n_hubs_total"]   = _n_hubs_total
 
     if store_eff_ts:
         result["eff_b_ts"] = eff_b_ts

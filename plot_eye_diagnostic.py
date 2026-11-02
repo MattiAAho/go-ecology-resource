@@ -162,7 +162,7 @@ for row, col, field, regime_data, regime_label in PANEL_SPECS_3P:
             pos = grp_center + offsets[contest]
             vals = [r[field] for r in regime_data
                     if r["graph_type"] == gtype and r["contest"] == contest]
-            lab = f"{GLABEL[gtype]}\n{CLABEL[contest]}" if gi == 0 else None
+            lab = CLABEL[contest] if gi == 0 else None
             vplot(ax, [vals], [pos], C_COLOR[contest], width=0.35, label=lab)
 
         xtick_pos.append(grp_center)

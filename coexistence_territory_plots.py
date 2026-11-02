@@ -249,6 +249,15 @@ def plot2_eye_structure_by_rank(records: list[dict], out_path: Path) -> None:
 # Plot 3 — Filter pass rate per graph_type × contest
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _beta_hdi(a: float, b: float, mass: float) -> tuple[float, float]:
+    """Highest-density interval of Beta(a, b) holding `mass` (shortest interval, grid over the lower tail)."""
+    from scipy.stats import beta
+    tail = np.linspace(0.0, 1.0 - mass, 4001)
+    lo, hi = beta.ppf(tail, a, b), beta.ppf(tail + mass, a, b)
+    i = int(np.argmin(hi - lo))
+    return float(lo[i]), float(hi[i])
+
+
 def plot3_filter_rate(records: list[dict], out_path: Path) -> None:
     """
     Grouped bar chart: fraction of runs per graph_type × contest that pass
@@ -284,7 +293,7 @@ def plot3_filter_rate(records: list[dict], out_path: Path) -> None:
 
     # Build arrays
     rates:  dict[tuple, float] = {}
-    errors: dict[tuple, float] = {}  # Wilson interval half-width
+    errors: dict[tuple, tuple] = {}  # (below, above) the observed rate
     for gt in IRREGULAR_GRAPHS:
         for contest in contests:
             key = (gt, contest)
@@ -292,16 +301,14 @@ def plot3_filter_rate(records: list[dict], out_path: Path) -> None:
             k = passing[key]
             if n == 0:
                 rates[key]  = float("nan")
-                errors[key] = 0.0
+                errors[key] = (0.0, 0.0)
             else:
                 p = k / n
                 rates[key]  = p
-                # Wilson score 95% CI half-width
-                z = 1.96
-                denom = 1 + z**2 / n
-                centre = (p + z**2 / (2 * n)) / denom
-                half   = z * np.sqrt(p * (1 - p) / n + z**2 / (4 * n**2)) / denom
-                errors[key] = half
+                # 2026-11-01 (m1 H4 read D8, MA "Yes, 89% HDI"): 89% HDI of the Beta(1,1)-binomial posterior, whose
+                # mode is k / n; it replaces a Wilson 95% half-width drawn symmetrically around p
+                lo, hi = _beta_hdi(k + 1, n - k + 1, 0.89)
+                errors[key] = (p - lo, hi - p)
 
     n_gt = len(IRREGULAR_GRAPHS)
     n_c  = len(contests)
@@ -314,7 +321,7 @@ def plot3_filter_rate(records: list[dict], out_path: Path) -> None:
     for j, contest in enumerate(contests):
         xs    = x_centers + j * bar_w - (n_c - 1) * bar_w / 2
         ys    = [rates.get((gt, contest), float("nan")) for gt in IRREGULAR_GRAPHS]
-        yerrs = [errors.get((gt, contest), 0.0) for gt in IRREGULAR_GRAPHS]
+        yerrs = np.array([errors.get((gt, contest), (0.0, 0.0)) for gt in IRREGULAR_GRAPHS]).T
         # Replace nan with 0 for bar, keep nan markers invisible
         ys_plot = [y if not np.isnan(y) else 0.0 for y in ys]
 
@@ -335,7 +342,7 @@ def plot3_filter_rate(records: list[dict], out_path: Path) -> None:
 
     ax.set_xticks(x_centers)
     ax.set_xticklabels([GRAPH_LABELS[g] for g in IRREGULAR_GRAPHS], fontsize=10)
-    ax.set_ylabel(f"Fraction passing filter\n(survivors ≥ {SURVIVORS_MIN}, Jain ≥ {JAIN_THRESHOLD})", fontsize=9)
+    ax.set_ylabel(f"Genuine coexistence rate\n(survivors = {SURVIVORS_MIN}, Jain ≥ {JAIN_THRESHOLD})", fontsize=9)
     ax.set_ylim(0, min(1.0, ax.get_ylim()[1] * 1.25))
     ax.legend(fontsize=9, frameon=False)
     ax.grid(axis="y", alpha=0.35, lw=0.6)
