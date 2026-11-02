@@ -231,7 +231,7 @@ python plot_coexistence_vs_k_combined.py   # Figure 6 (fig5)
 
 ### Step 10 — Numbers quoted in the text
 
-Requires Steps 2–4 and the synchronous diagnostic of Step 6.
+Requires Steps 2–6.
 
 ```bash
 python describe_m1_text_numbers.py         # → results/m1_text_numbers.txt
@@ -241,7 +241,11 @@ python analysis_time_to_limbo.py           # settling times (Methods), printed
 `describe_m1_text_numbers.py` prints the numbers in the text and tables that no figure shows: the weakest species'
 share of the final stones on regular and irregular graphs (Table 4, Claim 3), the matched cells under both
 schedulers, the two-player dominance rates per cell (Table 4, Claim 1; Figure 2 caption), the two-player dominance
-and segregation shares (Figure 4 caption), and the regular–irregular contrast within each policy mix.
+and segregation shares (Figure 4 caption), the regular–irregular contrast within each policy mix, captures per move,
+the synchronous / Gillespie-like dominance ratio, genuine coexistence per graph family (S6 caption), the synchronous
+three-player diagnostic per cell, both gate diagnostics (Figure 7 and S8 captions), the exploration-rate sweep, and
+the mean outcome per policy combination (S1 caption). `analysis_time_to_limbo.py` prints the settling times quoted
+in Methods and in the S11 caption; the Bayesian posterior probabilities and HDIs are in `statistical_results.md`.
 
 ---
 
