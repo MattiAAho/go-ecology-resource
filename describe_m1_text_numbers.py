@@ -20,6 +20,8 @@ Reads the result files (no games are run) and prints the numbers behind:
  11. The three-player gate paragraph and S8's caption: the three-player gate diagnostic.
  12. The exploration-rate paragraph and the behavioural-strategy paragraph: the exploration-rate sweep.
  13. S1's caption and the behavioural-strategy paragraph: the mean outcome per policy combination.
+ 14. S4's caption: stone groups in two-player segregation runs; the exploration-rate paragraph and S9's caption: the
+     all-three-present gap between the two exploration rates over time, and how fast the board fills.
 The settling times in Methods and in S11's caption are printed by analysis_time_to_limbo.py; the posterior
 probabilities and HDIs of the Bayesian analyses are in statistical_results.md (statistical_analysis.py).
 
@@ -268,7 +270,7 @@ def section6(rows):
         R = [x for x in rows["two-player"] if x[0] == sch and x[1] in ("sbm", "dc_sbm")]
         seg = [x[9] for x in R if 2 * x[5] > .85]
         dom = [x[9] for x in R if 2 * x[5] < .10]
-        say(f"  {sch:13s}: segregation {pct(np.mean(seg))} [{len(seg)}], dominance {pct(np.mean(dom))} [{len(dom)}]")
+        say(f"  {sch:13s}: segregation {np.mean(seg):.3f} [{len(seg)}], dominance {np.mean(dom):.3f} [{len(dom)}]")
     say()
 
 
@@ -451,6 +453,57 @@ def section13(rows):
     say()
 
 
+# ── 14. S4 group counts; S9 survival gap and fill pace (added 2026-11-03) ───
+def section14():
+    say("14. S4 AND S9 CAPTIONS, EXPLORATION-RATE PARAGRAPH (two_p_all_v1.pkl; eps_sweep_ava_v1.pkl)")
+    with open("results/two_p_all_v1.pkl", "rb") as fh:
+        R = pickle.load(fh)
+    say("   S4: two-player segregation runs (CI > .85), ER / SBM / DC-SBM, all schedulers, k, n and policies pooled;")
+    say("   winner = the colour with more stones (as plot_eye_diagnostic.py); stone groups at the final turn")
+    for gt in IRREGULAR:
+        w, l = [], []
+        for r in R:
+            if r.get("connectivity_failed") or r["_graph_type"] != gt or r.get("black_occupancy") is None:
+                continue
+            if ci_2p(r) <= .85:
+                continue
+            b_wins = r["black_occupancy"] >= r["white_occupancy"]
+            w.append(r.get("black_groups" if b_wins else "white_groups", 0))
+            l.append(r.get("white_groups" if b_wins else "black_groups", 0))
+        for name, v in (("winner", np.array(w)), ("loser", np.array(l))):
+            say(f"  {gt:6s} {name:6s}: median {np.median(v):.0f}, two or more groups {pct(np.mean(v >= 2))}, "
+                f"max {v.max()} [{len(v)}]")
+    del R
+    gc.collect()
+    with open("results/eps_sweep_ava_v1.pkl", "rb") as fh:
+        A = [r for r in pickle.load(fh) if r["_graph_type"] == "dc_sbm" and r["_eps"] in (0.02, 0.15)]
+    gc.collect()
+    cols, every = (1, -1, 2), 20                         # occ_ts_by_color: one snapshot every 20 turns, 250 snapshots
+    say("   S9 (left panel's rule): share of DC-SBM AVA runs with all three species above 0.1% of the board [runs]")
+    alive = {}
+    for e in (0.02, 0.15):
+        R = [r for r in A if r["_eps"] == e]
+        alive[e] = np.mean([[all(r["occ_ts_by_color"][c][i] > 0.001 for c in cols) for i in range(250)] for r in R],
+                           axis=0)
+        say(f"  eps {e}: " + ", ".join(f"turn {t}: {pct(alive[e][t // every])}" for t in (500, 2000, 4980))
+            + f" [{len(R)}]")
+    say("  gap (eps .15 minus .02), percentage points: " + ", ".join(
+        f"turn {t}: {100 * (alive[0.15][t // every] - alive[0.02][t // every]):+.1f}" for t in (500, 2000, 4980)))
+    say("   S9 right panel: mean occupancy per species (total / 3) at turn 200, by final presence and board size [runs]")
+    for e in (0.02, 0.15):
+        for n in (225, 625):
+            out = []
+            for name, keep in (("all present", lambda r: r.get("survivors_count", 3) == 3),
+                               ("species lost", lambda r: r.get("survivors_count", 3) < 3)):
+                R = [r for r in A if r["_eps"] == e and r["_n_nodes"] == n and keep(r)]
+                m = np.mean([np.mean([r["occ_ts_by_color"][c][200 // every] for c in cols]) for r in R]) if R else np.nan
+                out.append(f"{name} {m:.3f} [{len(R)}]")
+            say(f"  eps {e} n {n}: " + " | ".join(out))
+    del A
+    gc.collect()
+    say()
+
+
 def main():
     say(__doc__.strip().split("\n\n")[0])
     say()
@@ -483,6 +536,7 @@ def main():
     section11()
     section12()
     section13(rows)
+    section14()
     with open(OUT, "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines) + "\n")
     print(f"wrote {OUT}")

@@ -87,7 +87,7 @@ for col, (title, files, mode, sched, ylab) in enumerate(panels):
     ax2.set_xlim(0, 5000)
     ax2.set_ylim(0, 0.55)
     if col == 0:
-        ax2.set_ylabel("|statistic − final|")
+        ax2.set_ylabel("|statistic − late mean|")
         ax2.legend(fontsize=7, loc="upper right")
     print(f"{title}: n={A.shape[0]}  median-dev@2500={np.nanmedian(dev[:, np.argmin(np.abs(t-MID_T))]):.4f}")
 

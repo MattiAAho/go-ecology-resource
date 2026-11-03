@@ -288,7 +288,7 @@ fig3, axes3 = plt.subplots(1, 2, figsize=(13, 5), constrained_layout=True)
 fig3.suptitle(
     "DC-SBM AVA — ε=0.02 vs ε=0.15  (all policies pooled,  n=416 per ε)\n"
     "Left: fraction of runs with all three species present over time  ·  "
-    "Right: mean occupancy (all 3 colors averaged) split by outcome",
+    "Right: mean occupancy per species (total / 3), split by final presence",
     fontsize=9.5,
 )
 
@@ -325,9 +325,9 @@ for label, m_c, lo_c, hi_c, m_e, lo_e, hi_e, color_eps, n_c, n_e in [
                 label=f"{label} species lost (n={n_e})")
         ax.fill_between(TURNS, lo_e, hi_e, color=color_eps, alpha=0.08)
 
-ax.axhline(1/3, color="0.6", lw=0.8, ls=":", label="1/3 equal share")
+ax.axhline(1/3, color="0.6", lw=0.8, ls=":", label="1/3 = full board")
 ax.set_xlabel("Game turn", fontsize=9)
-ax.set_ylabel("Mean occupancy (all 3 colors averaged)", fontsize=9)
+ax.set_ylabel("Mean occupancy per species (total / 3)", fontsize=9)
 ax.set_xlim(0, 4980); ax.set_ylim(0, 0.7)
 ax.legend(fontsize=8, loc="upper right", framealpha=0.85)
 ax.grid(alpha=0.2)

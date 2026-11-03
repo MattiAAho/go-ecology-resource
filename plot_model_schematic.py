@@ -68,7 +68,7 @@ xJ = 0.778                  # branch point (turn end)
 
 lbox(cP, y_mid, wP, mh, "Place stone or pass\n(reactive heuristic; ε random)")
 lbox(cF, y_mid, wF, mh, "Form groups\n(stones + liberties)")
-lbox(cO, y_mid, wO, mh, "Outcome\ncoexistence / dominance", fc="#f0eef7")
+lbox(cO, y_mid, wO, mh, "Outcome\n(final occupancy)", fc="#f0eef7")
 lbox(cA, y_low, wA, lh, "Capture attempt\n(last liberty removed)", fs=8)
 lbox(cG, y_low, wG, lh, "Resource gate\n$p=S_A/(S_A{+}\\delta S_D)$", fc="#eaf2fb", fs=8)
 lbox(cC, y_low, wC, lh, "Capture\n(remove dead group)", fc="#eafaef", fs=8)
@@ -230,7 +230,7 @@ for x, s in zip([0.52, 0.70], ["synchronous\n(round-robin)", "energy-weighted as
 # --- scalar sweep parameters ---
 ax.text(0.05, 0.115, "Other swept parameters:", ha="left", fontsize=10, fontweight="bold", color=INK)
 ax.text(0.27, 0.115,
-        "mean degree k ∈ {8, 10, 12, 14, 19}   ·   board size n ∈ {81, 225, 361, 625}   ·   exploration ε = 0.15",
+        "mean degree k ∈ {8, 10, 12, 14, 19} (lattice, torus: k ≈ 4)   ·   board size n ∈ {81, 225, 361, 625}   ·   exploration ε = 0.15",
         ha="left", fontsize=9.5, color=INK)
 ax.text(0.05, 0.075,
         "ε fixed at 0.15 in production, also swept {0.02, 0.04, 0.07, 0.15} for sensitivity "

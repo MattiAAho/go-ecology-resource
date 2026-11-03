@@ -5,7 +5,8 @@ plot_policy_sensitivity.py — Diagnostic policy sensitivity check. Rough only.
   Row 0: two-player   | sync (left)  | Gillespie-like (right)
   Row 1: three-player | RPS (left)   | AVA (right)
 
-x-axis: policy label; one line per graph type; error bars ±1 std.
+x-axis: policy label; one line per graph type; error bars = 89% HDI of each mean (Bayesian bootstrap, seeded).
+2026-11-03 (MA): error bars were ±1 std (the spread of runs); now the 89% HDI of the mean, as elsewhere in m1.
 All k and grid sizes pooled.
 """
 import pickle
@@ -15,6 +16,7 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import arviz as az
 from analysis_helpers import ci_2p
 
 FIGURES_DIR = Path("figures")
@@ -47,8 +49,18 @@ def means_by_policy(data, policies, metric_fn, gtype):
         vals = [metric_fn(r) for r in data
                 if r["_graph_type"] == gtype and r["_policy"] == p]
         vals = [v for v in vals if v is not None and np.isfinite(v)]
-        out[p] = (np.mean(vals), np.std(vals), len(vals)) if vals else (np.nan, np.nan, 0)
+        out[p] = (np.mean(vals), mean_hdi(np.array(vals, float)), len(vals)) if vals else (np.nan, (np.nan, np.nan), 0)
     return out
+
+
+RNG = np.random.default_rng(20261103)
+
+
+def mean_hdi(vals, draws=4000, prob=0.89):
+    """89% HDI of the mean: Bayesian bootstrap (Dirichlet(1, ..., 1) weights over the runs)."""
+    m = RNG.dirichlet(np.ones(len(vals)), size=draws) @ vals
+    lo, hi = az.hdi(m, hdi_prob=prob)
+    return float(lo), float(hi)
 
 # ── figure ────────────────────────────────────────────────────────────────────
 fig, axes = plt.subplots(2, 2, figsize=(12, 8), constrained_layout=True)
@@ -75,7 +87,8 @@ for ax, data, policies, metric_fn, gtypes, title in PANEL_SPECS:
     for i, gtype in enumerate(gtypes):
         stats = means_by_policy(data, policies, metric_fn, gtype)
         ys = [stats[p][0] for p in policies]
-        es = [stats[p][1] for p in policies]
+        es = np.array([[ys[j] - stats[p][1][0] for j, p in enumerate(policies)],
+                       [stats[p][1][1] - ys[j] for j, p in enumerate(policies)]])
         ns = [stats[p][2] for p in policies]
         xpos = xs + offsets[i]
         ax.errorbar(xpos, ys, yerr=es,

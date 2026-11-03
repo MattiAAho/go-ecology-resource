@@ -243,8 +243,9 @@ share of the final stones on regular and irregular graphs (Table 4, Claim 3), th
 schedulers, the two-player dominance rates per cell (Table 4, Claim 1; Figure 2 caption), the two-player dominance
 and segregation shares (Figure 4 caption), the regular–irregular contrast within each policy mix, captures per move,
 the synchronous / Gillespie-like dominance ratio, genuine coexistence per graph family (S6 caption), the synchronous
-three-player diagnostic per cell, both gate diagnostics (Figure 7 and S8 captions), the exploration-rate sweep, and
-the mean outcome per policy combination (S1 caption). `analysis_time_to_limbo.py` prints the settling times quoted
+three-player diagnostic per cell, both gate diagnostics (Figure 7 and S8 captions), the exploration-rate sweep,
+the mean outcome per policy combination (S1 caption), the stone groups in two-player segregation runs (S4 caption),
+and the exploration-rate gap over time and the pace at which the board fills (S9 caption). `analysis_time_to_limbo.py` prints the settling times quoted
 in Methods and in the S11 caption; the Bayesian posterior probabilities and HDIs are in `statistical_results.md`.
 
 ---
