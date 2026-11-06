@@ -35,8 +35,8 @@ Definitions:
     three-player  0 | (0, .05] | (.05, .10] | (.10, .20] | (.20, 1/3]
     two-player    0 | (0, .05] | (.05, .20] | (.20, .425] | (.425, .5]
 
-Requires results/two_p_all_v1.pkl, full_all_v2.pkl, ava_all_v1.pkl (Steps 2-4), eps_sweep_2p_v1.pkl and
-eps_sweep_ava_v1.pkl (Step 5), and gate_diag_v1.pkl, gate_3p_diag_v1.pkl, sync_3p_diag_v1.pkl (Step 6).
+Requires results/two_p_all_v1.pkl, full_all_v2.pkl, ava_all_v1.pkl (Steps 2-4), eps_sweep_2p_v1.pkl,
+eps_sweep_rps_v1.pkl and eps_sweep_ava_v1.pkl (Step 5), and gate_diag_v1.pkl, gate_3p_diag_v1.pkl, sync_3p_diag_v1.pkl (Step 6).
 
 Usage:
     python describe_m1_text_numbers.py        # prints, and writes results/m1_text_numbers.txt
@@ -401,7 +401,8 @@ def section11():
 
 # ── 12. Exploration-rate sweep ───────────────────────────────────────────────
 def section12():
-    say("12. EXPLORATION-RATE SWEEP (eps_sweep_2p_v1.pkl, eps_sweep_ava_v1.pkl; exploration and strategy paragraphs)")
+    say("12. EXPLORATION-RATE SWEEP (eps_sweep_2p_v1.pkl, eps_sweep_rps_v1.pkl, eps_sweep_ava_v1.pkl; exploration and "
+        "strategy paragraphs)")
     EPS = (0.02, 0.04, 0.07, 0.15)
     D = load_diag("eps_sweep_2p_v1.pkl")
     say("   two-player dominance (CI < .10) per exploration rate [games]")
@@ -410,6 +411,13 @@ def section12():
             f"eps {e}: {pct(np.mean([2 * x['s2'] < .10 for x in D if x['gt'] == gt and x['eps'] == e]))} "
             f"[{sum(x['gt'] == gt and x['eps'] == e for x in D)}]" for e in EPS))
     del D
+    R = load_diag("eps_sweep_rps_v1.pkl")
+    say("   RPS, genuine coexistence per exploration rate, n = 225 and 625 pooled [games] (regular graphs: 0.02 and 0.15 only)")
+    for gt in REGULAR + IRREGULAR:
+        say(f"  RPS {gt:7s}: " + " | ".join(
+            f"eps {e}: {pct(np.mean([x['surv'] == 3 and x['jain'] >= .85 for x in R if x['gt'] == gt and x['eps'] == e]))} "
+            f"[{sum(x['gt'] == gt and x['eps'] == e for x in R)}]" for e in EPS if any(x['gt'] == gt and x['eps'] == e for x in R)))
+    del R
     A = load_diag("eps_sweep_ava_v1.pkl")
     say("   AVA, all three species present at the end, per exploration rate")
     for gt in IRREGULAR:
