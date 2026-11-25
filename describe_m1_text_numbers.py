@@ -587,9 +587,9 @@ def section15(rows):
         "sync_3p_regular_v1.pkl: lattice")
     say("      and torus) and the Gillespie-like runs at matched conditions (production files: the same graph types, "
         "ER and SBM at")
-    say("      final turn = the stored final stones (turn 5,000); the series run to turn 4,980.")
     say("      k = 10 and 14, policies AAA and BBB). Series every 20 turns; r = 3 x the weakest species' share; second "
         "half = turns 2,500-4,980.")
+    say("      final turn = the stored final stones (turn 5,000); the series run to turn 4,980.")
     keep = lambda r: (r["_scheduler"] == "gillespie_occ" and r["_grid_size"] in (15, 25)
                       and r.get("_policy") in ("AAA", "BBB")
                       and (r["_graph_type"] in REGULAR or (r["_graph_type"] in ("er", "sbm")
