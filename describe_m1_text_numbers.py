@@ -25,6 +25,10 @@ Reads the result files (no games are run) and prints the numbers behind:
  15. The third revision (synchronous three-player runs keep cycling): the horizon paragraph in Methods, the
      scheduler-robustness paragraph, the three-player gate paragraph and S8's caption, the Discussion, Table 4's
      synchronous row, the run total in the Introduction, and the two-player Discussion sentence on the schedulers.
+ 16. The exploration-rate and behavioural-strategy paragraphs: the exploration-rate effect on AVA presence and the
+     BBB-minus-AAA contrasts with their HDIs, which species is lost in mixed three-player games, the invasive
+     player's wins in mixed two-player games, and the two-player alive groups at the final turn (each graph rebuilt
+     from its stored seed with rps_sweep.GRAPH_MAKERS, as run_eps_sweep.py builds it; no games are run).
 The settling times in Methods and in S11's caption are printed by analysis_time_to_limbo.py; the posterior
 probabilities and HDIs of the Bayesian analyses are in statistical_results.md (statistical_analysis.py).
 
@@ -46,13 +50,18 @@ Section 15 also reads sync_3p_regular_v1.pkl (run_sync_3p_regular.py) and gate_3
 Usage:
     python describe_m1_text_numbers.py        # prints, and writes results/m1_text_numbers.txt
 """
+import contextlib
 import gc
+import io
 import pickle
 from collections import Counter, defaultdict
 
 import numpy as np
+from scipy import stats
+from scipy.signal import fftconvolve
 
-from analysis_helpers import ci_2p
+from analysis_helpers import analyse_eyes, ci_2p
+from rps_sweep import GRAPH_MAKERS
 
 OUT = "results/m1_text_numbers.txt"
 CONTESTS = (("two-player", "two_p_all_v1.pkl", (1, -1)), ("RPS", "full_all_v2.pkl", (1, -1, 2)),
@@ -687,6 +696,106 @@ def section15(rows):
     say()
 
 
+# ── 16. Exploration-rate sweep: policy, species-level and alive-group numbers ─
+COL3 = (1, -1, 2)                         # black, white, red: the colour order of the policy letters (rps_sweep.COLORS)
+
+
+def beta_diff(k1, n1, k0, n0, h=1e-5):
+    """Posterior of p1 - p0 under Beta(1, 1) priors, computed exactly on a grid of step h (the density of the
+    difference is the cross-correlation of the two beta densities): mean, 89% HDI, P(> 0)."""
+    x = np.arange(0, 1 + h / 2, h)
+    f = fftconvolve(stats.beta.pdf(x, k1 + 1, n1 - k1 + 1), stats.beta.pdf(x, k0 + 1, n0 - k0 + 1)[::-1])
+    d = (np.arange(len(f)) - (len(x) - 1)) * h
+    f = np.clip(f, 0, None) / (np.clip(f, 0, None).sum() * h)
+    top = np.argsort(f)[::-1]
+    keep = top[:np.searchsorted(np.cumsum(f[top]) * h, .89) + 1]
+    return (d * f).sum() * h, d[keep].min(), d[keep].max(), f[d > 0].sum() * h
+
+
+def section16():
+    say("16. EXPLORATION-RATE SWEEP: POLICY, SPECIES-LEVEL AND ALIVE-GROUP NUMBERS (eps_sweep_2p_v1.pkl, "
+        "eps_sweep_rps_v1.pkl,")
+    say("    eps_sweep_ava_v1.pkl; exploration-rate and behavioural-strategy paragraphs). Posteriors: Beta(1, 1) priors, "
+        "89% HDI computed")
+    say("    exactly on a 1e-5 grid. Alive group = a group with at least two eyes (analysis_helpers.analyse_eyes).")
+    ns = lambda r, c: r["n_stones"].get(c, r["n_stones"].get(str(c), 0))
+    E = {}
+    for name, fname in (("RPS", "eps_sweep_rps_v1.pkl"), ("AVA", "eps_sweep_ava_v1.pkl")):
+        with open(f"results/{fname}", "rb") as fh:
+            E[name] = [(r["_graph_type"], r["_eps"], r["_policy"], r["survivors_count"], [ns(r, c) for c in COL3])
+                       for r in pickle.load(fh) if not r.get("connectivity_failed")]
+        gc.collect()
+    say("   (a) AVA, all three species present at the end, eps 0.15 minus 0.02 [runs per eps]")
+    for gt in IRREGULAR:
+        k = {e: sum(s == 3 for g, ep, p, s, _ in E["AVA"] if g == gt and abs(ep - e) < 1e-9) for e in (0.02, 0.15)}
+        n = {e: sum(1 for g, ep, *_ in E["AVA"] if g == gt and abs(ep - e) < 1e-9) for e in (0.02, 0.15)}
+        _m, lo, hi, p = beta_diff(k[0.15], n[0.15], k[0.02], n[0.02])
+        say(f"  {gt:6s}: {pct(k[0.02] / n[0.02])} -> {pct(k[0.15] / n[0.15])}, difference "
+            f"{100 * (k[0.15] / n[0.15] - k[0.02] / n[0.02]):+.1f} points, "
+            f"89% HDI [{100 * lo:+.1f}, {100 * hi:+.1f}], P(> 0) {p:.3f} [{n[0.02]}, {n[0.15]}]")
+    say("   (b) all three species present at the end, BBB minus AAA, all exploration rates pooled [runs per policy]")
+    for name in ("RPS", "AVA"):
+        for gt in IRREGULAR:
+            k = {q: sum(s == 3 for g, ep, p, s, _ in E[name] if g == gt and p == q) for q in ("AAA", "BBB")}
+            n = {q: sum(1 for g, ep, p, *_ in E[name] if g == gt and p == q) for q in ("AAA", "BBB")}
+            _m, lo, hi, _p = beta_diff(k["BBB"], n["BBB"], k["AAA"], n["AAA"])
+            say(f"  {name} {gt:6s}: AAA {pct(k['AAA'] / n['AAA'])}, BBB {pct(k['BBB'] / n['BBB'])}, difference "
+                f"{100 * (k['BBB'] / n['BBB'] - k['AAA'] / n['AAA']):+.1f} points, 89% HDI [{100 * lo:+.1f}, {100 * hi:+.1f}] "
+                f"[{n['AAA']}, {n['BBB']}]")
+    say("   (c) runs that lost exactly one species: share in which the lost species is a B player (null = B's share of "
+        "the three)")
+    for name in ("RPS", "AVA"):
+        for pol in ("BAA", "BAB"):
+            bcols = {i for i, letter in enumerate(pol) if letter == "B"}
+            hit = defaultdict(lambda: [0, 0])
+            for g, ep, p, s, st in E[name]:
+                gone = [i for i in range(3) if st[i] == 0]
+                if p != pol or len(gone) != 1:
+                    continue
+                for key in (g, "all"):
+                    hit[key][0] += gone[0] in bcols
+                    hit[key][1] += 1
+            say(f"  {name} {pol}: B lost in {hit['all'][0]} of {hit['all'][1]} = {pct(hit['all'][0] / hit['all'][1])} "
+                f"(null {pct(len(bcols) / 3)}); " + ", ".join(f"{g} {pct(a / b)} [{b}]" for g, (a, b) in
+                                                             sorted(hit.items()) if g != "all"))
+    del E
+    gc.collect()
+    with open("results/eps_sweep_2p_v1.pkl", "rb") as fh:
+        R = [r for r in pickle.load(fh) if not r.get("connectivity_failed")]
+    say("   (d) two-player mixed games (AB, BA): the B player's share of wins, ties dropped, all exploration rates pooled")
+    for gt in IRREGULAR + REGULAR:
+        won = [(ns(r, 1) > ns(r, -1)) == (r["_policy"][0] == "B") for r in R
+               if r["_graph_type"] == gt and r["_policy"] in ("AB", "BA") and ns(r, 1) != ns(r, -1)]
+        say(f"  {gt:7s}: {sum(won)} of {len(won)} = {pct(np.mean(won))}")
+    say("   (e) two-player alive groups at the final turn: the graph rebuilt from its stored seed "
+        "(rps_sweep.GRAPH_MAKERS, as")
+    say("       run_eps_sweep.py builds it; no games are run); winner = more stones, ties dropped; "
+        "dominance CI < .10, segregation CI > .85")
+    alive = defaultdict(list)
+    for r in R:
+        b, w = ns(r, 1), ns(r, -1)
+        if b == w:
+            continue
+        with contextlib.redirect_stdout(io.StringIO()):          # the graph makers report their redraws
+            G = GRAPH_MAKERS[r["_graph_type"]](r["_grid_size"], r["_target_k"], seed=r["_graph_seed"])
+        assert set(G.nodes()) == set(r["final_state"]), "rebuilt graph does not match the stored final state"
+        eb, ew = (analyse_eyes(G, r["final_state"], c)["n_alive_groups"] for c in (1, -1))
+        win, lose = (eb, ew) if b > w else (ew, eb)
+        ci = ci_2p(r)
+        regime = "dominance" if ci < .10 else "segregation" if ci > .85 else None
+        if regime:
+            alive[(r["_graph_type"], regime)].append((lose, win))
+    for gt in IRREGULAR + REGULAR:
+        for regime in ("dominance", "segregation"):
+            a = np.array(alive.get((gt, regime), []), float).reshape(-1, 2)
+            if len(a):
+                say(f"  {gt:7s} {regime:11s}: loser holds an alive group {pct(np.mean(a[:, 0] > 0))} "
+                    f"(at most {a[:, 0].max():.0f}), winner {pct(np.mean(a[:, 1] > 0))} [{len(a)}]")
+    del R
+    gc.collect()
+    say()
+
+
 def main():
     say(__doc__.strip().split("\n\n")[0])
     say()
@@ -721,6 +830,7 @@ def main():
     section13(rows)
     section14()
     section15(rows)
+    section16()
     with open(OUT, "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines) + "\n")
     print(f"wrote {OUT}")

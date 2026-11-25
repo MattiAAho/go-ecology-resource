@@ -269,7 +269,10 @@ the synchronous / Gillespie-like dominance ratio, genuine coexistence per graph 
 three-player diagnostic per cell, both gate diagnostics (Figure 7 and S8 captions), the exploration-rate sweep,
 the mean outcome per policy combination (S1 caption), the stone groups in two-player segregation runs (S4 caption),
 and the exploration-rate gap over time and the pace at which the board fills (S9 caption), and the synchronous
-three-player runs over the second half of the run, the replayed gate runs and the run total (section 15). `analysis_time_to_limbo.py` prints the settling times quoted
+three-player runs over the second half of the run, the replayed gate runs and the run total (section 15), and from
+the exploration-rate sweep the policy contrasts with their HDIs, which species is lost in mixed games, the invasive
+player's wins and the two-player alive groups (section 16; it rebuilds each graph from its stored seed, no games are
+run). `analysis_time_to_limbo.py` prints the settling times quoted
 in Methods and in the S11 caption; the Bayesian posterior probabilities and HDIs are in `statistical_results.md`.
 
 ---
