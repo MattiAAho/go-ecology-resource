@@ -32,6 +32,8 @@ rps_sweep.py                    Main sweep runner: two-player, RPS, AVA
 run_gate_diagnostic.py          Two-player gate on/off diagnostic sweep
 run_gate_3p_diagnostic.py       Three-player gate on/off diagnostic sweep
 run_sync_3p_diagnostic.py       Synchronous-scheduler three-player diagnostic
+run_sync_3p_regular.py          The same diagnostic on the lattice and the torus
+run_gate_3p_sync_series.py      Replay of the synchronous three-player gate runs, series stored
 run_eps_sweep.py                Exploration-rate (ε) sensitivity sweep (modes: 2p, rps, ava)
 eye_analysis_3p.py              Eye/group structure analysis (three-player)
 coexistence_territory_plots.py  Territory plots for genuine coexistence runs
@@ -177,6 +179,27 @@ Generates `results/sync_3p_diag_v1.pkl`
 (416 runs: two-player + RPS + AVA under synchronous scheduling, ER + SBM, k = 10 and 14)  
 Expected wall time: **15–30 minutes**.
 
+The same diagnostic on the regular graphs:
+
+```bash
+python run_sync_3p_regular.py
+```
+
+Generates `results/sync_3p_regular_v1.pkl`  
+(208 runs: RPS + AVA under synchronous scheduling, lattice and torus, n = 225 and 625)  
+Expected wall time: **a few minutes**.
+
+Replay of the synchronous runs of the three-player gate diagnostic with the occupancy series stored (same seeds and
+final states as `gate_3p_diag_v1.pkl`; the second-half shares in the gate paragraph and S8's caption):
+
+```bash
+python run_gate_3p_sync_series.py          # a rerun skips the runs already on file
+```
+
+Generates `results/gate_3p_sync_series_v1.pkl`  
+(624 runs: RPS + AVA, synchronous, n = 625)  
+Expected wall time: **about an hour with 30 workers**.
+
 ### Step 7 — Eye / group structure analysis
 
 Generates `results/eye_records_3p.pkl` and diagnostic plots in `results/`.  
@@ -245,7 +268,8 @@ and segregation shares (Figure 4 caption), the regular–irregular contrast with
 the synchronous / Gillespie-like dominance ratio, genuine coexistence per graph family (S6 caption), the synchronous
 three-player diagnostic per cell, both gate diagnostics (Figure 7 and S8 captions), the exploration-rate sweep,
 the mean outcome per policy combination (S1 caption), the stone groups in two-player segregation runs (S4 caption),
-and the exploration-rate gap over time and the pace at which the board fills (S9 caption). `analysis_time_to_limbo.py` prints the settling times quoted
+and the exploration-rate gap over time and the pace at which the board fills (S9 caption), and the synchronous
+three-player runs over the second half of the run, the replayed gate runs and the run total (section 15). `analysis_time_to_limbo.py` prints the settling times quoted
 in Methods and in the S11 caption; the Bayesian posterior probabilities and HDIs are in `statistical_results.md`.
 
 ---

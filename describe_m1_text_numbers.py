@@ -22,6 +22,9 @@ Reads the result files (no games are run) and prints the numbers behind:
  13. S1's caption and the behavioural-strategy paragraph: the mean outcome per policy combination.
  14. S4's caption: stone groups in two-player segregation runs; the exploration-rate paragraph and S9's caption: the
      all-three-present gap between the two exploration rates over time, and how fast the board fills.
+ 15. The third revision (synchronous three-player runs keep cycling): the horizon paragraph in Methods, the
+     scheduler-robustness paragraph, the three-player gate paragraph and S8's caption, the Discussion, Table 4's
+     synchronous row, the run total in the Introduction, and the two-player Discussion sentence on the schedulers.
 The settling times in Methods and in S11's caption are printed by analysis_time_to_limbo.py; the posterior
 probabilities and HDIs of the Bayesian analyses are in statistical_results.md (statistical_analysis.py).
 
@@ -37,6 +40,8 @@ Definitions:
 
 Requires results/two_p_all_v1.pkl, full_all_v2.pkl, ava_all_v1.pkl (Steps 2-4), eps_sweep_2p_v1.pkl,
 eps_sweep_rps_v1.pkl and eps_sweep_ava_v1.pkl (Step 5), and gate_diag_v1.pkl, gate_3p_diag_v1.pkl, sync_3p_diag_v1.pkl (Step 6).
+Section 15 also reads sync_3p_regular_v1.pkl (run_sync_3p_regular.py) and gate_3p_sync_series_v1.pkl
+(run_gate_3p_sync_series.py).
 
 Usage:
     python describe_m1_text_numbers.py        # prints, and writes results/m1_text_numbers.txt
@@ -512,6 +517,176 @@ def section14():
     say()
 
 
+# ── 15. Third revision: synchronous three-player runs keep cycling ────────────
+ORDER3 = (1, 2, -1)                       # cyclic order of the three species
+PRED3 = {1: 2, 2: -1, -1: 1}              # the species that preys on c under RPS
+I_FROM, I_HALF, I_4000, I_LAST = 31, 125, 200, 249   # series sample i = turn 20 i (620, 2,500, 4,000, 4,980)
+
+
+def series_rows(fname, keep):
+    """Per run: contest, graph type, grid, scheduler and the stones of each species every 20 turns."""
+    with open(f"results/{fname}", "rb") as fh:
+        R = pickle.load(fh)
+    out = []
+    for r in R:
+        if r.get("connectivity_failed") or not keep(r):
+            continue
+        o = r["occ_ts_by_color"]
+        out.append(dict(contest=r["_contest"], gt=r["_graph_type"], g=r["_grid_size"], sch=r["_scheduler"],
+                        C=np.array([o.get(c, o.get(str(c))) for c in ORDER3], float).T,
+                        F=np.array([r["n_stones"].get(c, r["n_stones"].get(str(c), 0)) for c in ORDER3], float)))
+    del R
+    gc.collect()
+    return out
+
+
+def cycle_measures(C, F):
+    """C: the series (every 20 turns, to turn 4,980); F: the stored stones at the final turn (5,000)."""
+    rf = 3 * F.min() / F.sum() if F.sum() else 0.
+    pf = int((F > 0).sum())
+    tot = C.sum(1)
+    S = C / np.where(tot > 0, tot, 1)[:, None]
+    r = np.where(tot > 0, 3 * S.min(1), 0.)
+    jain = np.where(tot > 0, tot ** 2 / (3 * np.where(tot > 0, (C ** 2).sum(1), 1)), 0.)
+    pres = (C > 0).sum(1)
+    # the rare species of each deep low (weakest at most 3.3%, r <= .1) entered from a high (r >= .5), from turn 620
+    band, cur, lows = None, None, []
+    for j in range(I_FROM, len(r)):
+        nb = "lo" if r[j] <= .1 else "hi" if r[j] >= .5 else None
+        if nb == "lo" and band == "hi":
+            cur = []
+            lows.append(cur)
+        if nb:
+            band = nb
+        if band == "lo" and cur is not None and r[j] <= .1:
+            cur.append(j)
+    rares = []
+    for e in lows:
+        m = S[e].mean(0)
+        o = np.sort(m)
+        rares.append(None if o[1] - o[0] < 1e-12 else ORDER3[int(np.argmin(m))])
+    way = other = 0
+    for a, b in zip(rares, rares[1:]):
+        if a is not None and b is not None and a != b:
+            way += b == PRED3[a]
+            other += b != PRED3[a]
+    h = slice(I_HALF, I_LAST + 1)
+    mono = np.nonzero(pres[I_FROM:I_4000] == 1)[0]
+    return dict(swing=r[h].min() <= .1 and r[h].max() >= .5, jsd=jain[h].std(), way=way, other=other,
+                mono=bool(len(mono)), back=bool(len(mono)) and bool((pres[I_FROM + mono[0]:] == 3).any()),
+                abs_end=pf < 3, abs_time=np.mean(pres[h] < 3), mono_end=pf == 1,
+                mono_time=np.mean(pres[h] == 1), w20_end=rf > .6, w20_time=np.mean(r[h] > .6),
+                w5_end=rf <= .15, w5_time=np.mean(r[h] <= .15), all3_time=np.mean(pres[h] == 3))
+
+
+def section15(rows):
+    say("15. THIRD REVISION: SYNCHRONOUS THREE-PLAYER RUNS KEEP CYCLING (horizon paragraph in Methods; "
+        "scheduler-robustness")
+    say("    paragraph; three-player gate paragraph and S8 caption; Discussion; Table 4 synchronous row; run total)")
+    say("  (a) m1's synchronous three-player runs (sync_3p_diag_v1.pkl: ER and SBM, k = 10 and 14; "
+        "sync_3p_regular_v1.pkl: lattice")
+    say("      and torus) and the Gillespie-like runs at matched conditions (production files: the same graph types, "
+        "ER and SBM at")
+    say("      final turn = the stored final stones (turn 5,000); the series run to turn 4,980.")
+    say("      k = 10 and 14, policies AAA and BBB). Series every 20 turns; r = 3 x the weakest species' share; second "
+        "half = turns 2,500-4,980.")
+    keep = lambda r: (r["_scheduler"] == "gillespie_occ" and r["_grid_size"] in (15, 25)
+                      and r.get("_policy") in ("AAA", "BBB")
+                      and (r["_graph_type"] in REGULAR or (r["_graph_type"] in ("er", "sbm")
+                                                           and r["_target_k"] in (10, 14))))
+    X = (series_rows("sync_3p_diag_v1.pkl", lambda r: True) + series_rows("sync_3p_regular_v1.pkl", lambda r: True)
+         + series_rows("full_all_v2.pkl", keep) + series_rows("ava_all_v1.pkl", keep))
+    for x in X:
+        x.update(cycle_measures(x.pop("C"), x.pop("F")))
+    for g in (25, 15):
+        say(f"  === n {g * g}")
+        for contest, label in (("rps", "RPS"), ("all_vs_all", "AVA")):
+            for sch in ("sync", "gillespie_occ"):
+                for cls, gts in (("regular", REGULAR), ("irregular", ("er", "sbm"))):
+                    c = [x for x in X if x["contest"] == contest and x["g"] == g and x["sch"] == sch and x["gt"] in gts]
+                    m = [x for x in c if x["mono"]]
+                    way, other = sum(x["way"] for x in c), sum(x["other"] for x in c)
+                    mean = lambda k: np.mean([x[k] for x in c])
+                    say(f"  {label} {sch:13s} {cls:9s} [{len(c)}]: swing (r <= .1 and >= .5 in the second half) "
+                        f"{pct(mean('swing'))}; per-run SD of Jain, median {np.median([x['jsd'] for x in c]):.4f}; "
+                        f"weakest changes the RPS way {way} of {way + other}"
+                        + (f" ({pct(way / (way + other))})" if way + other else ""))
+                    say(f"      monopoly before turn 4,000 in {len(m)} runs, all three present again later in "
+                        f"{sum(x['back'] for x in m)}; final turn | second half: a species absent "
+                        f"{pct(mean('abs_end'))} | {pct(mean('abs_time'))}, monopoly {pct(mean('mono_end'))} | "
+                        f"{pct(mean('mono_time'))}, weakest above 20% {pct(mean('w20_end'))} | {100 * mean('w20_time'):.2f}%, "
+                        f"weakest at most 5% {pct(mean('w5_end'))} | {pct(mean('w5_time'))}; all three present "
+                        f"{pct(mean('all3_time'))} of the second half")
+    del X
+    gc.collect()
+
+    say("  (b) the synchronous runs of the three-player gate diagnostic, replayed with the series stored "
+        "(gate_3p_sync_series_v1.pkl);")
+    say("      genuine coexistence (all three present, Jain >= 0.85) at the final turn | share of the second half, "
+        "n = 625, k = 10 and 14 pooled")
+    key = ("_contest", "_graph_type", "_target_k", "_use_gate", "_rep")
+    with open("results/gate_3p_diag_v1.pkl", "rb") as fh:
+        stored = {tuple(r[k] for k in key): r for r in pickle.load(fh)
+                  if r["_scheduler"] == "sync" and r["_n_nodes"] == 625}
+    with open("results/gate_3p_sync_series_v1.pkl", "rb") as fh:
+        rep = [r for r in pickle.load(fh) if not r.get("connectivity_failed")]
+    same = sum(stored[tuple(r[k] for k in key)]["n_stones"] == r["n_stones"] for r in rep)
+    say(f"      replays {len(rep)}, final stones equal to the stored run in {same} (stored synchronous n = 625 runs: "
+        f"{len(stored)})")
+    for contest, label in (("rps", "RPS"), ("all_vs_all", "AVA")):
+        for gts in (("er",), ("sbm",), ("dc_sbm",), ("er", "sbm")):
+            out = []
+            for gate in (True, False):
+                c = [r for r in rep if r["_contest"] == contest and r["_graph_type"] in gts and bool(r["_use_gate"]) == gate]
+                fin = np.mean([genuine(r["survivors_count"], r["jain_fairness_final"]) for r in c])
+                half = []
+                for r in c:
+                    o = r["occ_ts_by_color"]
+                    C = np.array([o.get(k, o.get(str(k))) for k in ORDER3], float).T[I_HALF:I_LAST + 1]
+                    tot = C.sum(1)
+                    jain = np.where(tot > 0, tot ** 2 / (3 * np.where(tot > 0, (C ** 2).sum(1), 1)), 0.)
+                    half.append(np.mean(((C > 0).sum(1) == 3) & (jain >= .85)))
+                out.append(f"{'ON' if gate else 'OFF'} {pct(fin)} | {pct(np.mean(half))} [{len(c)}]")
+            say(f"      {label} {' + '.join(gts):8s}: " + "; ".join(out))
+
+    say("  (c) runs per row of Table 3 (connectivity failures left out) and the run total in the Introduction")
+    total = 0
+    for fname in ("two_p_all_v1.pkl", "full_all_v2.pkl", "ava_all_v1.pkl", "sync_3p_diag_v1.pkl",
+                  "sync_3p_regular_v1.pkl", "gate_diag_v1.pkl", "gate_3p_diag_v1.pkl", "eps_sweep_2p_v1.pkl",
+                  "eps_sweep_rps_v1.pkl", "eps_sweep_ava_v1.pkl"):
+        with open(f"results/{fname}", "rb") as fh:
+            nr = sum(not r.get("connectivity_failed") for r in pickle.load(fh))
+        gc.collect()
+        total += nr
+        say(f"      {fname:24s} {nr:6,d}")
+    say(f"      total {total:,d} (the replays in (b) repeat stored runs and are not counted)")
+
+    say("  (d) two-player, synchronous turns: section 5's rule (regular minus irregular within each policy mix) on the "
+        "synchronous rows")
+    cells = defaultdict(list)
+    for sch, gt, g, k, pol, sm, _ in (x[:7] for x in rows["two-player"]):
+        if sch == "sync":
+            cells[(pol, g, gt in REGULAR, gt, k)].append(2 * sm)
+    cells = {k_: np.array(v) for k_, v in cells.items()}
+
+    def diff(a, b):
+        a, b = np.concatenate(a), np.concatenate(b)
+        return np.mean(a >= .7) - np.mean(b >= .7), np.mean(a < .3) - np.mean(b < .3)
+
+    for g in GRIDS:
+        held = 0
+        for m in MIXES["two-player"]:
+            reg = [v for k_, v in cells.items() if k_[:3] == (m, g, True)]
+            irr = [v for k_, v in cells.items() if k_[:3] == (m, g, False)]
+            dh, dl = diff(reg, irr)
+            boot = [diff([RNG.choice(c, len(c)) for c in reg], [RNG.choice(c, len(c)) for c in irr])[0]
+                    for _ in range(BOOT)]
+            lo = np.percentile(boot, 2.5)
+            held += bool(dh > 0 and lo > 0 and dl < 0)
+        say(f"      n {g * g:3d}: holds in {held} of 4 mixes")
+    say()
+
+
 def main():
     say(__doc__.strip().split("\n\n")[0])
     say()
@@ -545,6 +720,7 @@ def main():
     section12()
     section13(rows)
     section14()
+    section15(rows)
     with open(OUT, "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines) + "\n")
     print(f"wrote {OUT}")
