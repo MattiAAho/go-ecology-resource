@@ -176,7 +176,7 @@ python run_sync_3p_diagnostic.py
 ```
 
 Generates `results/sync_3p_diag_v1.pkl`  
-(416 runs: two-player + RPS + AVA under synchronous scheduling, ER + SBM, k = 10 and 14)  
+(416 runs: RPS + AVA under synchronous scheduling, ER + SBM, k = 10 and 14)  
 Expected wall time: **15–30 minutes**.
 
 The same diagnostic on the regular graphs:
